@@ -1,0 +1,39 @@
+# Version control
+.git/
+.gitignore
+.github/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Virtualenv (built inside the container)
+.venv/
+
+# Tests + dev tooling (not needed at runtime)
+tests/
+.claude/
+
+# Env + secrets
+.env
+.env.*.local
+
+# Logs
+*.log
+
+# Docker + compose (not needed inside the image)
+docker-compose.yml
+
+# Docs
+README.md
+CLAUDE.md

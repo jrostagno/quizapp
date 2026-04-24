@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.notifications.email import MockEmailSender, build_payload
 from app.notifications.models import Notification, NotificationStatus
 from app.quizzes.models import Quiz
+from app.users import models as _users_models  # noqa: F401 — register User mapper
 
 logger = logging.getLogger(__name__)
 

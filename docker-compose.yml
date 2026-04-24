@@ -44,5 +44,39 @@ services:
       timeout: 3s
       retries: 10
 
+  app:
+    build: .
+    container_name: quizapp-app
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres-dev:5432/quizapp
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres-test:5432/quizapp_test
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  worker:
+    build: .
+    container_name: quizapp-worker
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres-dev:5432/quizapp
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres-test:5432/quizapp_test
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: INFO
+    command: arq app.notifications.worker.WorkerSettings
+
 volumes:
   postgres-dev-data:
