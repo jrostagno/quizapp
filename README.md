@@ -18,8 +18,12 @@ uv sync
 cp .env.example .env
 docker compose up -d --wait
 uv run alembic upgrade head
+uv run python -m scripts.seed  # optional: loads two sample quizzes
 uv run uvicorn app.main:app --reload
 ```
+
+The seed script is idempotent — re-running it skips quizzes that already
+exist (matched by title).
 
 Then open `http://localhost:8000/docs` for the interactive API docs.
 
