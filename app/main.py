@@ -18,6 +18,61 @@ API_V1_PREFIX = "/api/v1"
 logger = logging.getLogger(__name__)
 
 
+APP_DESCRIPTION = """
+RESTful API for AI Development quiz challenges.
+
+## What it does
+
+- Create quizzes with Markdown content (questions, options, explanations).
+- Start quiz attempts — users are upserted by email on the first attempt.
+- Submit answers; receive a score, a feedback message, and a per-question
+  breakdown with correctness and explanations.
+- Queue an asynchronous email notification (arq + Redis). Submission does
+  not fail if the broker is unavailable.
+- List a user's attempts and aggregate stats (total attempts, average
+  percentage over submitted attempts).
+
+## Conventions
+
+- Every endpoint is mounted under `/api/v1/...`.
+- Errors follow a consistent envelope: `{"error": {"code", "message", "details"}}`.
+- Correct answers and explanations are only exposed via attempt submission
+  and attempt detail endpoints, never on the quiz GETs.
+- Question and option bodies, plus explanations, are stored as Markdown.
+""".strip()
+
+
+TAGS_METADATA = [
+    {
+        "name": "health",
+        "description": "Liveness probe.",
+    },
+    {
+        "name": "quizzes",
+        "description": (
+            "Create and retrieve quizzes. Correct answers and explanations are "
+            "**never** exposed here."
+        ),
+    },
+    {
+        "name": "attempts",
+        "description": (
+            "Start a quiz attempt, submit answers for scoring, and fetch the full "
+            "per-question breakdown. Submitting also queues an asynchronous email "
+            "notification."
+        ),
+    },
+    {
+        "name": "users",
+        "description": (
+            "Per-user progress and aggregate stats. Users are never created here "
+            "directly — the first `POST /api/v1/attempts` with a given email "
+            "creates the user."
+        ),
+    },
+]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
@@ -43,8 +98,9 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="QuizApp",
-        description="RESTful API for AI Development quiz challenges.",
+        description=APP_DESCRIPTION,
         version="0.1.0",
+        openapi_tags=TAGS_METADATA,
         lifespan=lifespan,
     )
     register_exception_handlers(app)
@@ -53,8 +109,13 @@ def create_app() -> FastAPI:
     app.include_router(attempts_router, prefix=API_V1_PREFIX)
     app.include_router(users_router, prefix=API_V1_PREFIX)
 
-    @app.get("/health", tags=["health"])
+    @app.get(
+        "/health",
+        tags=["health"],
+        summary="Liveness probe",
+    )
     async def health() -> dict[str, str]:
+        """Return a static `{"status": "ok"}` payload when the process is running."""
         return {"status": "ok"}
 
     return app
