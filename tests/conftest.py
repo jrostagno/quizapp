@@ -1,6 +1,8 @@
 from collections.abc import AsyncGenerator
 
 import pytest_asyncio
+from arq import create_pool
+from arq.connections import ArqRedis, RedisSettings
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -32,8 +34,20 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
     await engine.dispose()
 
 
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def test_arq_pool() -> AsyncGenerator[ArqRedis, None]:
+    settings = get_settings()
+    pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+    await pool.flushdb()
+    yield pool
+    await pool.aclose()
+
+
 @pytest_asyncio.fixture(loop_scope="session")
-async def db_session(test_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(
+    test_engine: AsyncEngine,
+    test_arq_pool: ArqRedis,
+) -> AsyncGenerator[AsyncSession, None]:
     session_factory = async_sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
     async with session_factory() as session:
         try:
@@ -41,17 +55,25 @@ async def db_session(test_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, N
         finally:
             await session.close()
 
+    # Clean DB between tests.
     async with test_engine.begin() as conn:
         table_list = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
         await conn.execute(text(f"TRUNCATE TABLE {table_list} RESTART IDENTITY CASCADE"))
 
+    # Clean Redis (arq queue) between tests.
+    await test_arq_pool.flushdb()
+
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(
+    db_session: AsyncSession,
+    test_arq_pool: ArqRedis,
+) -> AsyncGenerator[AsyncClient, None]:
     async def _override_get_session() -> AsyncGenerator[AsyncSession, None]:
         yield db_session
 
     app.dependency_overrides[get_session] = _override_get_session
+    app.state.arq_pool = test_arq_pool
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as async_client:
         yield async_client

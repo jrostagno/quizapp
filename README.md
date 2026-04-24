@@ -15,7 +15,23 @@ See [`CLAUDE.md`](CLAUDE.md) for full architecture and conventions.
 
 ```bash
 uv sync
+cp .env.example .env
+docker compose up -d --wait
+uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
 
 Then open `http://localhost:8000/docs` for the interactive API docs.
+
+## Background worker
+
+Quiz submissions enqueue an email notification into Redis. A separate arq worker
+consumes the queue, invokes the (mocked) email sender, and updates the
+notification row. Run it in a second terminal:
+
+```bash
+uv run arq app.notifications.worker.WorkerSettings
+```
+
+If Redis or the worker are not available, submissions still succeed — the
+notification row is marked `failed_to_enqueue` instead.
