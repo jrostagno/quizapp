@@ -30,6 +30,33 @@ class InvalidQuizStructureError(DomainError):
     status_code = 422
 
 
+class AttemptNotFoundError(DomainError):
+    code = "attempt_not_found"
+    status_code = 404
+
+    def __init__(self, attempt_id: int) -> None:
+        super().__init__(
+            f"Attempt with id {attempt_id} was not found.",
+            details={"attempt_id": attempt_id},
+        )
+
+
+class AttemptAlreadySubmittedError(DomainError):
+    code = "attempt_already_submitted"
+    status_code = 409
+
+    def __init__(self, attempt_id: int) -> None:
+        super().__init__(
+            f"Attempt {attempt_id} has already been submitted.",
+            details={"attempt_id": attempt_id},
+        )
+
+
+class InvalidAnswerSubmissionError(DomainError):
+    code = "invalid_answer_submission"
+    status_code = 422
+
+
 def _domain_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
     return JSONResponse(
