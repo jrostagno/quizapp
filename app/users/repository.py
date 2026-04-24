@@ -13,6 +13,11 @@ class UserRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_id(self, user_id: int) -> User | None:
+        stmt = select(User).where(User.id == user_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def upsert_by_email(self, name: str, email: str) -> User:
         existing = await self.get_by_email(email)
         if existing is not None:

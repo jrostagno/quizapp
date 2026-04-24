@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.attempts.repository import AttemptRepository
 from app.attempts.schemas import (
+    AttemptDetail,
     AttemptResult,
     AttemptStartRequest,
     AttemptStartResponse,
@@ -22,9 +23,10 @@ from app.users.service import UserService
 
 
 def _build_attempt_service(session: SessionDep, arq_pool: ArqPoolDep) -> AttemptService:
+    attempt_repository = AttemptRepository(session)
     return AttemptService(
-        repository=AttemptRepository(session),
-        user_service=UserService(UserRepository(session), session),
+        repository=attempt_repository,
+        user_service=UserService(UserRepository(session), attempt_repository, session),
         quiz_service=QuizService(QuizRepository(session), session),
         notification_service=NotificationService(
             NotificationRepository(session), session, arq_pool
@@ -63,3 +65,11 @@ async def submit_attempt(
     service: AttemptServiceDep,
 ) -> AttemptResult:
     return await service.submit_attempt(attempt_id, data)
+
+
+@router.get("/{attempt_id}", response_model=AttemptDetail)
+async def get_attempt_detail(
+    attempt_id: int,
+    service: AttemptServiceDep,
+) -> AttemptDetail:
+    return await service.get_attempt_detail(attempt_id)

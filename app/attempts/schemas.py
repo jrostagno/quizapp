@@ -46,3 +46,37 @@ class AttemptResult(BaseModel):
     percentage: float
     feedback: str
     questions: list[QuestionResult]
+
+
+class AttemptListItem(BaseModel):
+    id: int
+    quiz_id: int
+    quiz_title: str
+    started_at: datetime
+    submitted_at: datetime | None
+    score: int | None
+    percentage: float | None
+
+
+class AttemptQuestionDetail(BaseModel):
+    question_id: int
+    body: str
+    position: int
+    selected_option_id: int
+    correct_option_id: int
+    is_correct: bool
+    explanation: str
+
+
+class AttemptDetail(BaseModel):
+    id: int
+    user_id: int
+    quiz_id: int
+    quiz_title: str
+    started_at: datetime
+    submitted_at: datetime | None
+    score: int | None
+    total: int
+    percentage: float | None
+    feedback: str | None
+    questions: list[AttemptQuestionDetail]
