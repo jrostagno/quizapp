@@ -6,8 +6,14 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+
+# Import model modules so their tables register with Base.metadata for autogenerate.
+from app.attempts import models as _attempts_models  # noqa: F401
 from app.core.config import get_settings
 from app.db.base import Base
+from app.notifications import models as _notifications_models  # noqa: F401
+from app.quizzes import models as _quizzes_models  # noqa: F401
+from app.users import models as _users_models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", get_settings().database_url)
