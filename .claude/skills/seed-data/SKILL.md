@@ -10,7 +10,7 @@ Run the idempotent seed script to populate the database with sample quizzes.
 ## Steps
 
 1. `uv run alembic upgrade head` — ensure migrations are applied.
-2. `uv run python scripts/seed.py` — inserts sample data; duplicates are skipped.
+2. `uv run python -m scripts.seed` — inserts sample data; duplicates are skipped.
 
 ## Output
 
