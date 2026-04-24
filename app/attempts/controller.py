@@ -10,7 +10,7 @@ from app.attempts.schemas import (
     AttemptSubmitRequest,
 )
 from app.attempts.service import AttemptService
-from app.core.deps import SessionDep
+from app.core.deps import ArqPoolDep, SessionDep
 from app.notifications.repository import NotificationRepository
 from app.notifications.service import NotificationService
 from app.quizzes.repository import QuizRepository
@@ -21,12 +21,14 @@ from app.users.schemas import UserRead
 from app.users.service import UserService
 
 
-def _build_attempt_service(session: SessionDep) -> AttemptService:
+def _build_attempt_service(session: SessionDep, arq_pool: ArqPoolDep) -> AttemptService:
     return AttemptService(
         repository=AttemptRepository(session),
         user_service=UserService(UserRepository(session), session),
         quiz_service=QuizService(QuizRepository(session), session),
-        notification_service=NotificationService(NotificationRepository(session), session),
+        notification_service=NotificationService(
+            NotificationRepository(session), session, arq_pool
+        ),
         session=session,
     )
 
