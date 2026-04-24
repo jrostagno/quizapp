@@ -57,6 +57,17 @@ class InvalidAnswerSubmissionError(DomainError):
     status_code = 422
 
 
+class UserNotFoundError(DomainError):
+    code = "user_not_found"
+    status_code = 404
+
+    def __init__(self, user_id: int) -> None:
+        super().__init__(
+            f"User with id {user_id} was not found.",
+            details={"user_id": user_id},
+        )
+
+
 def _domain_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
     return JSONResponse(

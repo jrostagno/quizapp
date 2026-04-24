@@ -6,6 +6,8 @@ from app.attempts.models import Answer, Attempt
 from app.attempts.repository import AttemptRepository
 from app.attempts.schemas import (
     AnswerSubmission,
+    AttemptDetail,
+    AttemptQuestionDetail,
     AttemptResult,
     AttemptStartRequest,
     AttemptSubmitRequest,
@@ -122,6 +124,57 @@ class AttemptService:
             percentage=percentage,
             feedback=feedback,
             questions=question_results,
+        )
+
+    async def get_attempt_detail(self, attempt_id: int) -> AttemptDetail:
+        attempt = await self.repository.get_detail(attempt_id)
+        if attempt is None:
+            raise AttemptNotFoundError(attempt_id)
+
+        quiz = attempt.quiz
+        questions_by_id = {q.id: q for q in quiz.questions}
+        options_by_id = {opt.id: opt for q in quiz.questions for opt in q.options}
+        correct_by_question: dict[int, int] = {}
+        for question in quiz.questions:
+            for option in question.options:
+                if option.is_correct:
+                    correct_by_question[question.id] = option.id
+
+        question_details: list[AttemptQuestionDetail] = []
+        if attempt.submitted_at is not None:
+            for answer in attempt.answers:
+                question = questions_by_id[answer.question_id]
+                selected = options_by_id[answer.option_id]
+                correct_id = correct_by_question[question.id]
+                question_details.append(
+                    AttemptQuestionDetail(
+                        question_id=question.id,
+                        body=question.body,
+                        position=question.position,
+                        selected_option_id=selected.id,
+                        correct_option_id=correct_id,
+                        is_correct=selected.id == correct_id,
+                        explanation=question.explanation,
+                    )
+                )
+            question_details.sort(key=lambda q: q.position)
+
+        feedback = (
+            feedback_for_percentage(attempt.percentage) if attempt.percentage is not None else None
+        )
+
+        return AttemptDetail(
+            id=attempt.id,
+            user_id=attempt.user_id,
+            quiz_id=quiz.id,
+            quiz_title=quiz.title,
+            started_at=attempt.started_at,
+            submitted_at=attempt.submitted_at,
+            score=attempt.score,
+            total=len(quiz.questions),
+            percentage=attempt.percentage,
+            feedback=feedback,
+            questions=question_details,
         )
 
     @staticmethod

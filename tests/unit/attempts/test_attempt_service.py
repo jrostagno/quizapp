@@ -194,6 +194,83 @@ async def test_submit_attempt_all_correct_returns_full_score() -> None:
     session.commit.assert_awaited_once()
 
 
+async def test_get_attempt_detail_not_found() -> None:
+    service, repository, *_ = _make_service()
+    repository.get_detail.return_value = None
+
+    with pytest.raises(AttemptNotFoundError):
+        await service.get_attempt_detail(77)
+
+
+async def test_get_attempt_detail_for_submitted_returns_breakdown() -> None:
+    from datetime import UTC, datetime
+
+    from app.attempts.models import Answer
+
+    service, repository, *_ = _make_service()
+    quiz, q1, q2, q1_correct, _, q2_correct, _ = _build_quiz()
+    now = datetime.now(UTC)
+    attempt = Attempt(
+        id=5,
+        user_id=9,
+        quiz_id=1,
+        started_at=now,
+        submitted_at=now,
+        score=2,
+        percentage=100.0,
+    )
+    attempt.quiz = quiz
+    attempt.answers = [
+        Answer(attempt_id=5, question_id=q1.id, option_id=q1_correct.id),
+        Answer(attempt_id=5, question_id=q2.id, option_id=q2_correct.id),
+    ]
+    repository.get_detail.return_value = attempt
+
+    detail = await service.get_attempt_detail(5)
+
+    assert detail.id == 5
+    assert detail.user_id == 9
+    assert detail.quiz_id == 1
+    assert detail.quiz_title == "T"
+    assert detail.score == 2
+    assert detail.total == 2
+    assert detail.percentage == 100.0
+    assert detail.feedback is not None
+    assert "Great job" in detail.feedback
+    assert len(detail.questions) == 2
+    # Sorted by position; Q1 first
+    assert detail.questions[0].position == 1
+    assert detail.questions[0].is_correct is True
+    assert detail.questions[0].body == "Q1?"
+    assert detail.questions[1].position == 2
+
+
+async def test_get_attempt_detail_for_unsubmitted_returns_empty_questions() -> None:
+    from datetime import UTC, datetime
+
+    service, repository, *_ = _make_service()
+    quiz, *_ = _build_quiz()
+    attempt = Attempt(
+        id=5,
+        user_id=1,
+        quiz_id=1,
+        started_at=datetime.now(UTC),
+        submitted_at=None,
+    )
+    attempt.quiz = quiz
+    attempt.answers = []
+    repository.get_detail.return_value = attempt
+
+    detail = await service.get_attempt_detail(5)
+
+    assert detail.submitted_at is None
+    assert detail.score is None
+    assert detail.percentage is None
+    assert detail.feedback is None
+    assert detail.questions == []
+    assert detail.total == 2
+
+
 async def test_submit_attempt_partial_score_and_tier() -> None:
     service, repository, *_ = _make_service()
     quiz, q1, q2, q1_correct, q1_wrong, _, q2_wrong = _build_quiz()

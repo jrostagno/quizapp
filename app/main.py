@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.quizzes.controller import router as quizzes_router
+from app.users.controller import router as users_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
 
     app.include_router(quizzes_router, prefix=API_V1_PREFIX)
     app.include_router(attempts_router, prefix=API_V1_PREFIX)
+    app.include_router(users_router, prefix=API_V1_PREFIX)
 
     @app.get("/health", tags=["health"])
     async def health() -> dict[str, str]:

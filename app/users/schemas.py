@@ -7,3 +7,9 @@ class UserRead(BaseModel):
     id: int
     name: str
     email: EmailStr
+
+
+class UserStats(BaseModel):
+    user_id: int
+    total_attempts: int
+    average_percentage: float | None
