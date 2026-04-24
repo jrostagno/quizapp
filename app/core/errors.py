@@ -14,6 +14,22 @@ class DomainError(Exception):
         self.details = details or {}
 
 
+class QuizNotFoundError(DomainError):
+    code = "quiz_not_found"
+    status_code = 404
+
+    def __init__(self, quiz_id: int) -> None:
+        super().__init__(
+            f"Quiz with id {quiz_id} was not found.",
+            details={"quiz_id": quiz_id},
+        )
+
+
+class InvalidQuizStructureError(DomainError):
+    code = "invalid_quiz_structure"
+    status_code = 422
+
+
 def _domain_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
     return JSONResponse(
